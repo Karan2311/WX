@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 #import time
 import warnings
-warnings.filterwarnings(ignore=True)
+warnings.filterwarnings('ignore')
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
