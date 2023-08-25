@@ -8,7 +8,7 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
 # update every 5 mins
-st_autorefresh(interval=10000, key="dataframerefresh")
+st_autorefresh(interval=60*1000, key="dataframerefresh")
 
 #to get data in excel sheet
 #wb =  xlwings.Book('WX_live_data.xlsx').sheets('Sheet1')
