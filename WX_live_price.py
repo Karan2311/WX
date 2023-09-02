@@ -46,6 +46,7 @@ def wx_live_data():
     bnc_api_url = "https://api.binance.com/api/v3/ticker/price"
     bnc_api = requests.get(bnc_api_url)
     bnc = pd.json_normalize(bnc_api.json())
+    st.dataframe(bnc)
     bnc.rename(columns ={'symbol' : 'coinpair','price':'binance_price'},inplace=True)
 
     wrx_usdt_1 = wrx_filtered[(wrx_filtered['Pair']=='usdt')]
