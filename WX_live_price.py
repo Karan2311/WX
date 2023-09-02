@@ -51,7 +51,7 @@ def wx_live_data():
     wrx_usdt_1 = wrx_filtered[(wrx_filtered['Pair']=='usdt')]
     wrx_usdt_1['coinpair'] = wrx_usdt_1['Coin'] + wrx_usdt_1['Pair']
     wrx_usdt_1['coinpair'] = wrx_usdt_1['coinpair'].str.upper()
-    wrx_bnc_compare = wrx_usdt_1.merge(bnc, on = 'coinpair', how = 'left')
+    wrx_bnc_compare = wrx_usdt_1.merge(bnc, left_on = 'coinpair',right_on = 'coinpair', how = 'left')
     wrx_bnc_compare['binance_price'] = wrx_bnc_compare['binance_price'].astype(float)
     top_seller = wrx_bnc_compare[wrx_bnc_compare['Seller'] < wrx_bnc_compare['binance_price']]
     top_seller['%_diff'] = 100 * (top_seller['binance_price'] - top_seller['Seller'])/top_seller['binance_price']
