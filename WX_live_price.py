@@ -5,7 +5,7 @@ import requests
 import warnings
 warnings.filterwarnings('ignore')
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
+#from streamlit_autorefresh import st_autorefresh
 
 # update every 60 seconds
 #st_autorefresh(interval=60*1000, key="dataframerefresh")
