@@ -1,0 +1,160 @@
+import pandas as pd
+import numpy as np
+
+def import_file(excel_file_name,excel_sheet_name):
+    df = pd.read_excel(excel_file_name,sheet_name=excel_sheet_name)
+    df['Date'] = pd.to_datetime(df['Date'],yearfirst=True)
+    df.sort_values(by='Date',ascending=True,inplace=True)
+    df.reset_index(drop=True,inplace=True)
+    return df
+
+def calculate_profit_loss_for_each_transaction(df):
+  final_df = pd.DataFrame()
+  market_list = list(df['Market'].unique())
+  for market in market_list:
+    print("Processing for market - ", market)
+    market_df = df[df['Market'] == market]
+    profit_loss_details = []
+    quantity_map = {}
+    balance = 0
+    for index, row in market_df.iterrows():
+      if row["Trade Type"] == "Buy":
+        buy_timestamp = row["Date"]
+        buy_price = row["Price"]
+        buy_quantity = row["Volume"]
+        if "buy_timestamp" not in quantity_map:
+          quantity_map["buy_timestamp"] = []
+        quantity_map["buy_timestamp"].append(buy_timestamp)
+        if "buy_price" not in quantity_map:
+          quantity_map["buy_price"] = []
+        quantity_map["buy_price"].append(buy_price)
+        if "buy_quantity" not in quantity_map:
+          quantity_map["buy_quantity"] = []
+        quantity_map["buy_quantity"].append(buy_quantity)
+        # if market != 'BTCINR':
+        #   balance = round((balance + buy_quantity),3)
+        # else:
+        balance = round((balance + buy_quantity),6)
+
+      elif row["Trade Type"] == "Sell":
+        sell_timestamp = row["Date"]
+        sell_price = row["Price"]
+        sell_quantity = row["Volume"]
+        if sell_timestamp not in quantity_map:
+          quantity_map["sell_timestamp"] = []
+        quantity_map["sell_timestamp"].append(sell_timestamp)
+        if sell_price not in quantity_map:
+          quantity_map["sell_price"] = []
+        quantity_map["sell_price"].append(sell_price)
+        if sell_quantity not in quantity_map:
+          quantity_map["sell_quantity"] = []
+        quantity_map["sell_quantity"].append(sell_quantity)
+        #print(quantity_map)
+        if sell_quantity <= quantity_map["buy_quantity"][0]:
+            profit_or_loss = sell_price * sell_quantity - quantity_map["buy_price"][0] * sell_quantity
+            # if market != 'BTCINR':
+            #   balance = round((balance - sell_quantity),3)
+            #   profit_loss_details.append((
+            #       quantity_map["buy_timestamp"][0], quantity_map["buy_price"][0], sell_quantity, sell_timestamp, sell_price,
+            #       sell_quantity, profit_or_loss,balance,market))
+            #   if balance == 0.000:
+            #     quantity_map["buy_timestamp"] = quantity_map["buy_timestamp"][1:]
+            #     quantity_map["buy_price"] = quantity_map["buy_price"][1:]
+            #     quantity_map["buy_quantity"] = quantity_map["buy_quantity"][1:]
+            #   else:
+            #     quantity_map["buy_quantity"][0] = round((quantity_map["buy_quantity"][0] - sell_quantity),3)
+            # else:
+            #print(quantity_map)
+            balance = round((balance - sell_quantity),6)
+            profit_loss_details.append((
+                quantity_map["buy_timestamp"][0], quantity_map["buy_price"][0], sell_quantity, sell_timestamp, sell_price,
+                sell_quantity, profit_or_loss,balance,market))
+            if balance == 0.000000:
+              quantity_map["buy_timestamp"] = quantity_map["buy_timestamp"][1:]
+              quantity_map["buy_price"] = quantity_map["buy_price"][1:]
+              quantity_map["buy_quantity"] = quantity_map["buy_quantity"][1:]
+            else:
+              quantity_map["buy_quantity"][0] = round((quantity_map["buy_quantity"][0] - sell_quantity),6)
+              #print(quantity_map)
+  
+        else: 
+          remaining_sell_quantity = sell_quantity   
+          for i in range(len(quantity_map["buy_quantity"])):
+            if remaining_sell_quantity >= quantity_map["buy_quantity"][i]:
+              profit_or_loss = sell_price * quantity_map["buy_quantity"][i] - quantity_map["buy_price"][i] * quantity_map["buy_quantity"][i]
+              # if market != 'BTCINR':
+              #   balance = round((balance - quantity_map["buy_quantity"][i]),3)
+              #   profit_loss_details.append((
+              #       quantity_map["buy_timestamp"][i], quantity_map["buy_price"][i], quantity_map["buy_quantity"][i], sell_timestamp, sell_price,
+              #       quantity_map["buy_quantity"][i], profit_or_loss,balance,market))
+              #   remaining_sell_quantity = round((remaining_sell_quantity - quantity_map["buy_quantity"][i]),3)
+              #   if remaining_sell_quantity < 0.001:
+              #     quantity_map["buy_timestamp"] = quantity_map["buy_timestamp"][i+1:]
+              #     quantity_map["buy_price"] = quantity_map["buy_price"][i+1:]
+              #     quantity_map["buy_quantity"] = quantity_map["buy_quantity"][i+1:]
+              #     break
+              # else:
+              balance = round((balance - quantity_map["buy_quantity"][i]),6)
+              profit_loss_details.append((
+                  quantity_map["buy_timestamp"][i], quantity_map["buy_price"][i], quantity_map["buy_quantity"][i], sell_timestamp, sell_price,
+                  quantity_map["buy_quantity"][i], profit_or_loss,balance,market))
+              remaining_sell_quantity = round((remaining_sell_quantity - quantity_map["buy_quantity"][i]),6)
+              if remaining_sell_quantity < 0.000001:
+                quantity_map["buy_timestamp"] = quantity_map["buy_timestamp"][i+1:]
+                quantity_map["buy_price"] = quantity_map["buy_price"][i+1:]
+                quantity_map["buy_quantity"] = quantity_map["buy_quantity"][i+1:]
+                break
+            else:
+              profit_or_loss = sell_price * remaining_sell_quantity - quantity_map["buy_price"][i] * remaining_sell_quantity
+              balance = round((balance - remaining_sell_quantity),6)
+              profit_loss_details.append((
+                  quantity_map["buy_timestamp"][i], quantity_map["buy_price"][i], remaining_sell_quantity, sell_timestamp, sell_price,
+                  remaining_sell_quantity, profit_or_loss,balance,market))
+              quantity_map["buy_quantity"][i] = round((quantity_map["buy_quantity"][i] - remaining_sell_quantity),3)
+              quantity_map["buy_timestamp"] = quantity_map["buy_timestamp"][i:]
+              quantity_map["buy_price"] = quantity_map["buy_price"][i:]
+              quantity_map["buy_quantity"] = quantity_map["buy_quantity"][i:]
+              break
+
+    ind_df = pd.DataFrame(profit_loss_details, columns=[
+        "buy_timestamp", "buy_price", "buy_quantity", "sell_timestamp", "sell_price",
+        "sell_quantity", "profit_or_loss","balance","market"])
+    final_df = pd.concat([final_df,ind_df])
+
+  return final_df
+
+def taxable_profit(df,pl_column):
+    profit = df[df[pl_column] > 0][pl_column].sum()
+    return profit
+
+def consolidated_pl(df):
+    df['pl'] = np.where(df['profit_or_loss'] > 0,'Profit','Loss')
+    df['total_buy_cost'] = df['buy_price'] * df['buy_quantity']
+    df['total_sell_cost'] = df['sell_price'] * df['sell_quantity']
+    con_df = df.groupby(by=['market','pl']).aggregate({'buy_timestamp':'min','sell_timestamp':'max','total_buy_cost':'sum','total_sell_cost':'sum','profit_or_loss':'sum'})
+    con_df.reset_index(inplace=True)
+    con_df_itr_format = con_df[['buy_timestamp','sell_timestamp','total_buy_cost','total_sell_cost','profit_or_loss']]
+    con_df_itr_format['buy_timestamp'] = pd.to_datetime(con_df_itr_format['buy_timestamp'])
+    con_df_itr_format['sell_timestamp'] = pd.to_datetime(con_df_itr_format['sell_timestamp'])
+    con_df_itr_format['buy_timestamp'] = con_df_itr_format['buy_timestamp'].dt.strftime('%d-%m-%Y')
+    con_df_itr_format['sell_timestamp'] = con_df_itr_format['sell_timestamp'].dt.strftime('%d-%m-%Y')
+    con_df_itr_format.rename(columns={'buy_timestamp':'Date of Acquisition','sell_timestamp':'Date of Transfer','total_buy_cost':'Cost of Acquisition','total_sell_cost':'Cost of Transfer','profit_or_loss':'P/L'},inplace=True)
+    return con_df_itr_format
+
+df1 = import_file("karan_input.xlsx","Sheet3")
+
+#for all markets in one go
+df2 = calculate_profit_loss_for_each_transaction(df1)
+df2
+
+profit = taxable_profit(df2,"profit_or_loss")
+profit
+
+df2.to_excel("itr_master_all_transactions_karan.xlsx")
+
+df3 = consolidated_pl(df2)
+
+profit1 = taxable_profit(df3,"P/L")
+profit1
+
+df3.to_excel("consolidated_itr_file_karan.xlsx")
